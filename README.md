@@ -9,7 +9,7 @@ Reads a prestack (or stacked) SEG-Y file, zeroes all samples whose absolute ampl
 
 ## Why does this exist?
 
-Prestack data regularly contains noise spikes, marine swell noise, equipment glitches, or other high-amplitude artefacts that survive SRME, deconvolution, and other processing steps. These spikes can distort stacking, velocity analysis, and AVO workflows.
+Prestack data regularly contains noise spikes, marine swell noise, equipment glitches, or other high-amplitude artefacts that survive other processing steps. These spikes can distort stacking, velocity analysis, and AVO workflows.
 
 AmpClip removes them cleanly in a single pass, producing an output file that any standard seismic interpretation or processing package can read without modification.
 
@@ -42,12 +42,6 @@ pip install -r requirements.txt
 ---
 
 ## Quick Start
-
-Open `ampclip.py`, scroll to the **USER CONFIGURATION** block at the bottom, set your paths and parameters, and run:
-
-```bash
-python ampclip.py
-```
 
 ### Example — percentile threshold (recommended starting point)
 
