@@ -8,16 +8,13 @@
 # -----------------------------------------------------------------------------
 
 # Path to the input prestack SEG-Y file.
-INPUT_FILE = r"E:\Others\4Caro\Data\SRME_SUB.sgy"
+INPUT_FILE = r"E:\Data\your_input_file.sgy"
 
 # Path for the output SEG-Y file.
 # Set to None to auto-generate a timestamped folder next to the input file.
-# Example: OUTPUT_FILE = r"E:\Others\4Caro\Data\SRME_SUB_ge_clipped.sgy"
-<<<<<<< HEAD
-OUTPUT_FILE = r"E:\Others\4Caro\Data\SRME_SUB_clipped_rms.sgy"
-=======
-OUTPUT_FILE = r"E:\Others\4Caro\Data\SRME_SUB_clipped_30.sgy"
->>>>>>> e254fb3364e12510385cc4f85f7b812057d05541
+OUTPUT_FILE = None
+# Example: OUTPUT_FILE = r"E:\Data\your_input_file_clipped.sgy"
+
 # -----------------------------------------------------------------------------
 #  THRESHOLD
 #
@@ -39,17 +36,10 @@ OUTPUT_FILE = r"E:\Others\4Caro\Data\SRME_SUB_clipped_30.sgy"
 #                 Factor 8–15 is typical for marine spike muting.
 # -----------------------------------------------------------------------------
 
-<<<<<<< HEAD
 THRESHOLD_MODE = "rms"   # "absolute" | "percentile" | "rms"
 
 # Used when THRESHOLD_MODE = "absolute"
-THRESHOLD = None                # e.g. 5.85  (float, must be > 0)
-=======
-THRESHOLD_MODE = "absolute"   # "absolute" | "percentile" | "rms"
-
-# Used when THRESHOLD_MODE = "absolute"
-THRESHOLD = 30                # e.g. 5.85  (float, must be > 0)
->>>>>>> e254fb3364e12510385cc4f85f7b812057d05541
+THRESHOLD = None                # e.g. 30.0  (float, must be > 0)
 
 # Used when THRESHOLD_MODE = "percentile"
 THRESHOLD_PERCENTILE = 99.9     # float in range (0, 100)

@@ -1,9 +1,9 @@
 # AmpClip
 
-> **Prestack SEG-Y Amplitude Threshold Muting Tool**  
-> *by Beni*
+**Prestack SEG-Y Amplitude Threshold Muting Tool**  
+*by Beni*
 
-Reads a prestack (or stacked) SEG-Y file, zeroes all samples whose absolute amplitude exceeds a user-defined threshold, and writes an output SEG-Y that is structurally identical to the input — same binary header, same text header, same trace order, same trace headers. Only the sample values that exceed the threshold change.
+AmpClip reads a prestack (or stacked) SEG-Y file, zeroes all samples whose absolute amplitude exceeds a user-defined threshold, and writes an output SEG-Y that is structurally identical to the input — same binary header, same text header, same trace order, same trace headers. Only the sample values that exceed the threshold are changed.
 
 ---
 
@@ -11,79 +11,220 @@ Reads a prestack (or stacked) SEG-Y file, zeroes all samples whose absolute ampl
 
 Prestack data regularly contains noise spikes, marine swell noise, equipment glitches, or other high-amplitude artefacts that survive other processing steps. These spikes can distort stacking, velocity analysis, and AVO workflows.
 
-AmpClip removes them cleanly in a single pass, producing an output file that any standard seismic interpretation or processing package can read without modification.
+AmpClip removes them cleanly in a single pass and produces an output file that any standard seismic interpretation or processing package can read without modification.
 
 ---
 
 ## Features
 
-- **Three threshold modes**: explicit absolute value, percentile of the amplitude distribution, or a multiple of the global RMS — pick whatever fits your workflow.
-- **Optional cosine taper**: softens the mute boundary with a configurable half-width (in samples) so the transition is not a hard rectangular window.
-- **Invert mode**: keep only samples *above* the threshold and zero everything else (useful for spike isolation / QC).
-- **Full header preservation**: binary header, EBCDIC text header, and all 240 bytes of every trace header are copied verbatim — no re-indexing, no geometry scrambling.
-- **Post-write verification**: optional spot-check that confirms amplitudes are within threshold and headers are intact before you declare success.
-- **Structured output directory**: timestamped folder with the output SEG-Y, a plain-text report, a JSON summary, and a detailed log file.
-- **tqdm progress bars**: because you deserve to know what is happening.
+- **Three threshold modes** — explicit absolute value, percentile of the amplitude distribution, or a multiple of the global RMS. Pick whatever fits your workflow.
+- **Optional cosine taper** — softens the mute boundary with a configurable half-width in samples so the transition is not a hard rectangular window.
+- **Invert mode** — keep only samples *above* the threshold and zero everything else, useful for spike isolation and QC.
+- **Full header preservation** — binary header, EBCDIC text header, and all 240 bytes of every trace header are copied verbatim. No re-indexing, no geometry scrambling.
+- **Post-write verification** — optional spot-check that confirms amplitudes are within threshold and headers are intact before you declare success.
+- **Structured output directory** — timestamped folder containing the output SEG-Y, a plain-text report, a JSON summary, and a detailed log file.
+- **QC plots** — optional matplotlib figures showing seismic sections before and after, the mute mask, amplitude histograms, and per-trace RMS curves.
+- **Progress bars** — tqdm progress indicators so you always know what is happening.
+
+---
+
+## Requirements
+
+- Python 3.8 or newer
+- segyio >= 1.9.0
+- numpy >= 1.21.0
+- tqdm >= 4.62.0
+- matplotlib >= 3.5.0 *(optional — only needed if `MAKE_PLOTS = True`)*
 
 ---
 
 ## Installation
 
+### Step 1 — Install Git (if you do not have it already)
+
+If you have never used Git before, download and install it from https://git-scm.com/downloads. Accept all default options during installation.
+
+To confirm it is installed, open a terminal (Command Prompt on Windows, Terminal on macOS/Linux) and run:
+
 ```bash
-pip install segyio numpy tqdm
+git --version
 ```
 
-Or use the requirements file:
+You should see a version number printed, for example `git version 2.43.0`.
+
+### Step 2 — Install Python (if you do not have it already)
+
+Download Python 3.8 or newer from https://www.python.org/downloads/. On Windows, make sure to tick **"Add Python to PATH"** during installation.
+
+To confirm it is installed:
+
+```bash
+python --version
+```
+
+### Step 3 — Clone the repository
+
+Navigate in your terminal to the folder where you want to place AmpClip, then run:
+
+```bash
+git clone https://github.com/geobenipy/AmpClip.git
+cd AmpClip
+```
+
+This downloads all the project files into a new folder called `AmpClip` and moves you into it.
+
+### Step 4 — Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
+That is it. AmpClip is ready to use.
+
 ---
 
-## Quick Start
+## How to use AmpClip
 
-### Example — percentile threshold (recommended starting point)
+AmpClip consists of two files that always sit in the same folder:
+
+| File | Purpose |
+|---|---|
+| `ampclip.py` | The engine. Do not edit this file. |
+| `config.py` | Your settings. Edit this file before each run. |
+
+**The only file you ever touch is `config.py`.**
+
+### Step 1 — Edit config.py
+
+Open `config.py` in any text editor (Notepad, VS Code, etc.) and set at minimum:
 
 ```python
-INPUT_FILE           = r"/data/SRME_SUB_ge.sgy"
-THRESHOLD            = None
-THRESHOLD_MODE       = "percentile"
-THRESHOLD_PERCENTILE = 99.9        # mute the top 0.1 % of amplitudes
-TAPER_SAMPLES        = 5           # 5-sample cosine taper on each side
-OUTPUT_FILE          = None        # auto-generated in timestamped directory
-VERIFY               = True
+INPUT_FILE  = r"C:\Data\your_file.sgy"   # full path to your SEG-Y file
+OUTPUT_FILE = r"C:\Data\your_file_clipped.sgy"   # where to write the result
+                                                  # or set to None for auto-naming
 ```
 
-### Example — explicit absolute threshold
+Then choose a threshold mode (see [Threshold modes](#threshold-modes) below) and set the corresponding parameters.
+
+### Step 2 — Run AmpClip
+
+In your terminal, make sure you are inside the `AmpClip` folder:
+
+```bash
+cd path/to/AmpClip
+python ampclip.py
+```
+
+AmpClip will print progress to the terminal and write a full log, a text report, and a JSON summary to an output directory next to your result file.
+
+---
+
+## Threshold modes
+
+Set `THRESHOLD_MODE` in `config.py` to one of three options:
+
+### `"absolute"` — you provide the threshold directly
 
 ```python
-INPUT_FILE     = r"/data/SRME_SUB_ge.sgy"
-THRESHOLD      = 1.5e6             # your known threshold
 THRESHOLD_MODE = "absolute"
-OUTPUT_FILE    = r"/data/SRME_SUB_ge_clipped.sgy"
-VERIFY         = True
+THRESHOLD      = 30.0          # zero any sample with |amplitude| > 30
 ```
 
-### Example — RMS-factor threshold
+Use this when you already know your data range, for example from a previous run or from inspecting an amplitude histogram.
+
+### `"percentile"` — threshold is computed from the data distribution
 
 ```python
-INPUT_FILE           = r"/data/SRME_SUB_ge.sgy"
-THRESHOLD            = None
+THRESHOLD_MODE       = "percentile"
+THRESHOLD            = None     # computed automatically
+THRESHOLD_PERCENTILE = 99.9     # mute the top 0.1 % of amplitudes
+SCAN_TRACES          = 5000     # how many traces to scan (higher = more accurate)
+```
+
+A good starting point if you are working with unfamiliar data. The tool scans a subset of traces, builds an amplitude distribution, and picks the value at the given percentile.
+
+### `"rms"` — threshold is a multiple of the global RMS
+
+```python
 THRESHOLD_MODE       = "rms"
-THRESHOLD_RMS_FACTOR = 10.0        # mute anything > 10 × global RMS
+THRESHOLD            = None    # computed automatically
+THRESHOLD_RMS_FACTOR = 10.0   # mute anything > 10 × global RMS
+SCAN_TRACES          = 5000
+```
+
+Recommended for marine spike muting. Factors of 8 to 15 are typical.
+
+### Choosing a mode
+
+| Situation | Recommended mode | Typical value |
+|---|---|---|
+| Known data range or physical units | `absolute` | based on your data |
+| First pass with unfamiliar data | `percentile` | 99.9 – 99.99 % |
+| Spike muting on marine data | `rms` | 8 – 15 × RMS |
+| Conservative clip (protect signal) | `percentile` | 99.99 % |
+| Aggressive clip (heavy noise) | `rms` | 5 × RMS |
+
+Start conservative. The report tells you exactly how many samples and traces were affected so you can iterate quickly.
+
+---
+
+## All config.py parameters
+
+```python
+# ── Input / Output ───────────────────────────────────────────────
+INPUT_FILE  = r"path/to/input.sgy"      # path to input SEG-Y
+OUTPUT_FILE = r"path/to/output.sgy"     # path for output SEG-Y
+                                         # None = auto-generated timestamped path
+
+# ── Threshold ────────────────────────────────────────────────────
+THRESHOLD_MODE       = "rms"            # "absolute" | "percentile" | "rms"
+THRESHOLD            = None             # float (absolute mode) or None (auto)
+THRESHOLD_PERCENTILE = 99.9             # used when THRESHOLD_MODE = "percentile"
+THRESHOLD_RMS_FACTOR = 10.0             # used when THRESHOLD_MODE = "rms"
+SCAN_TRACES          = 5000             # traces scanned for auto-estimation
+
+# ── Mute options ─────────────────────────────────────────────────
+TAPER_SAMPLES = 0       # cosine taper half-width in samples; 0 = hard mute
+INVERT        = False   # True = zero samples BELOW threshold (spike isolation)
+
+# ── QC / output ──────────────────────────────────────────────────
+VERIFY        = True    # post-write verification (recommended)
+MAKE_PLOTS    = False   # generate QC plots (requires matplotlib)
+PLOT_N_TRACES = 300     # traces shown in seismic section plots
+LOG_LEVEL     = 20      # 10=DEBUG  20=INFO  30=WARNING
 ```
 
 ---
 
-## API usage
+## Output structure
 
-You can also call the functions directly from another script:
+Every run creates a timestamped output directory next to the output SEG-Y:
+
+```
+<stem>_AMPCLIP_<YYYYMMDD_HHMMSS>/
+├── logs/
+│   └── ampclip.log          ← full DEBUG log
+├── plots/                   ← only present when MAKE_PLOTS = True
+│   ├── 01_seismic_comparison.png
+│   ├── 02_mute_mask.png
+│   ├── 03_per_trace_mute_count.png
+│   ├── 04_amplitude_histogram.png
+│   └── 05_rms_per_trace.png
+└── reports/
+    ├── ampclip_report.txt   ← human-readable summary
+    └── ampclip_summary.json ← machine-readable summary
+```
+
+---
+
+## Using AmpClip from another Python script
+
+You can import AmpClip and call it programmatically instead of using `config.py`:
 
 ```python
 from ampclip import run, estimate_threshold_from_percentile
 
-# Estimate a threshold first
+# Optional: inspect the threshold before committing to a run
 thr = estimate_threshold_from_percentile("/data/shot_gathers.sgy", percentile=99.9)
 print(f"Suggested threshold: {thr:.4g}")
 
@@ -94,84 +235,32 @@ output = run(
     taper_samples = 5,
     verify        = True,
 )
-print(f"Output: {output}")
+print(f"Output written to: {output}")
 ```
 
----
-
-## Output structure
-
-```
-<stem>_AMPCLIP_<YYYYMMDD_HHMMSS>/
-├── logs/
-│   └── ampclip.log          ← full DEBUG log
-└── reports/
-    ├── ampclip_report.txt   ← human-readable summary
-    └── ampclip_summary.json ← machine-readable summary
-```
-
-The clipped SEG-Y is written inside this directory unless you specify `OUTPUT_FILE` explicitly.
-
----
-
-## Parameters
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `input_path` | str | — | Path to the input SEG-Y file |
-| `threshold` | float \| None | None | Absolute amplitude threshold. `None` triggers auto-estimation. |
-| `output_path` | str \| None | None | Output SEG-Y path. `None` = auto-generated. |
-| `taper_samples` | int | 0 | Half-width of cosine taper in samples. 0 = hard mute. |
-| `invert` | bool | False | If True, zero samples *below* threshold instead. |
-| `verify` | bool | True | Post-write spot-check. |
-| `threshold_mode` | str | "absolute" | `"absolute"` \| `"percentile"` \| `"rms"` |
-| `threshold_percentile` | float | 99.9 | Percentile used when `threshold_mode="percentile"`. |
-| `threshold_rms_factor` | float | 10.0 | RMS multiplier used when `threshold_mode="rms"`. |
-| `scan_traces` | int | 5000 | Traces scanned for auto-estimation. |
-
----
-
-## Threshold guidance
-
-| Situation | Recommended mode | Typical value |
-|---|---|---|
-| Known data range / physical units | `absolute` | based on data |
-| First pass, unknown data | `percentile` | 99.9 – 99.99 % |
-| Spike muting on marine data | `rms` | 8–15 × RMS |
-| Conservative clip (protect signal) | `percentile` | 99.99 % |
-| Aggressive clip (heavy noise) | `rms` | 5 × RMS |
-
-Start conservative. The report tells you exactly how many samples and traces were affected, so you can iterate quickly.
+All parameters accepted by `run()` mirror the settings in `config.py`. Refer to the docstring in `ampclip.py` for the full parameter list.
 
 ---
 
 ## Verification
 
-When `verify=True` (default), AmpClip opens the output file after writing and checks:
+When `VERIFY = True` (the default), AmpClip opens the output file after writing and checks:
 
-1. Trace count matches input.
-2. Sample count matches input.
+1. Trace count matches the input.
+2. Sample count matches the input.
 3. A random sample of traces contains no amplitudes exceeding the threshold.
 4. All trace header bytes of sampled traces are identical to the input.
 
-The result is logged and written to the JSON summary. A failing verification does **not** delete the output file — it logs a warning so you can inspect.
+The result is logged and written to the JSON summary. A failing verification does not delete the output file — it logs a warning so you can inspect what went wrong.
 
 ---
 
 ## Notes
 
 - The output file is written with `segyio.create`, which preserves the data format code (IBM float, IEEE float, etc.) from the input binary header. The amplitude threshold is applied in floating-point arithmetic regardless of the stored format.
-- Very large files are processed trace-by-trace in a single pass; memory usage is O(samples_per_trace), not O(file_size).
-- The cosine taper is applied purely to the data — trace headers are never modified.
-
----
-
-## Requirements
-
-- Python ≥ 3.8
-- segyio ≥ 1.9.0
-- numpy ≥ 1.21.0
-- tqdm ≥ 4.62.0
+- Very large files are processed trace-by-trace in a single pass. Memory usage is proportional to the number of samples per trace, not the total file size.
+- The cosine taper is applied purely to the data. Trace headers are never modified.
+- IBM float to IEEE float conversion can introduce a rounding difference of up to approximately 0.03 %. Verification applies a 0.1 % tolerance so genuine violations still surface.
 
 ---
 
